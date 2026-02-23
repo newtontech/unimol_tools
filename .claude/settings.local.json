@@ -1,0 +1,9 @@
+{
+  "enabledMcpjsonServers": [
+    "search",
+    "zai-mcp-server",
+    "playwright",
+    "context7",
+    "tavily-search"
+  ]
+}

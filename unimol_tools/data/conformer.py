@@ -184,11 +184,10 @@ class ConformerGen(object):
     def transform(self, smiles_list):
         logger.info('Start generating conformers...')
         if self.multi_process:
-            pool = Pool(processes=min(8, os.cpu_count()))
-            results = [
-                item for item in tqdm(pool.imap(self.single_process, smiles_list))
-            ]
-            pool.close()
+            with Pool(processes=min(8, os.cpu_count())) as pool:
+                results = [
+                    item for item in tqdm(pool.imap(self.single_process, smiles_list))
+                ]
         else:
             results = [self.single_process(smiles) for smiles in tqdm(smiles_list)]
 
@@ -275,8 +274,8 @@ def inner_smi2coords(smi, seed=42, mode='fast', remove_hs=True, return_mol=False
             AllChem.Compute2DCoords(mol)
             coordinates_2d = mol.GetConformer().GetPositions().astype(np.float32)
             coordinates = coordinates_2d
-    except:
-        print("Failed to generate conformer, replace with zeros.")
+    except Exception as e:
+        logger.error("Failed to generate conformer for SMILES {}, replace with zeros. Error: {}".format(smi, e))
         coordinates = np.zeros((len(atoms), 3))
 
     if return_mol:
@@ -459,11 +458,10 @@ class UniMolV2Feature(object):
     def transform(self, smiles_list):
         logger.info('Start generating conformers...')
         if self.multi_process:
-            pool = Pool(processes=min(8, os.cpu_count()))
-            results = [
-                item for item in tqdm(pool.imap(self.single_process, smiles_list))
-            ]
-            pool.close()
+            with Pool(processes=min(8, os.cpu_count())) as pool:
+                results = [
+                    item for item in tqdm(pool.imap(self.single_process, smiles_list))
+                ]
         else:
             results = [self.single_process(smiles) for smiles in tqdm(smiles_list)]
 
