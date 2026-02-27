@@ -73,9 +73,22 @@ class MolDataReader(object):
             _ = data.pop('target', None)
             
             if 'atoms' in data and 'coordinates' in data:
-                if not isinstance(data['atoms'][0], list) and not isinstance(data['atoms'][0], np.ndarray):
+                # Check if this is a single molecule or a batch
+                # Single molecule: atoms = ['C', 'H', 'O'], coordinates = [[0,0,0], [0,0,1], [1,0,0]]
+                # Batch: atoms = [['C', 'H', 'O'], ...], coordinates = [[[0,0,0], ...], ...]
+                atoms_0 = data['atoms'][0]
+                coords_0 = data['coordinates'][0]
+                
+                # Check if atoms_0 is a string (single molecule) or a list (batch)
+                is_single_molecule = isinstance(atoms_0, str) or (
+                    not isinstance(atoms_0, list) and not isinstance(atoms_0, np.ndarray)
+                )
+                
+                if is_single_molecule:
+                    # Wrap single molecule into batch format
                     data['atoms'] = [data['atoms']]
                     data['coordinates'] = [data['coordinates']]
+                    
                 if not isinstance(data['atoms'][0][0], str):
                     pt = Chem.GetPeriodicTable()
                     data['atoms'] = [

@@ -182,28 +182,12 @@ class ConformerGen(object):
         return inputs
 
     def transform(self, smiles_list):
-        """
-        Transform a list of SMILES strings into conformer features.
-        
-        Uses multiprocessing with proper cleanup (pool.join()) and timeout
-        handling to prevent race conditions (fixes issue #19).
-        """
         logger.info('Start generating conformers...')
         if self.multi_process:
             with Pool(processes=min(8, os.cpu_count())) as pool:
-                # Use timeout to prevent indefinite hanging
-                try:
-                    results = [
-                        item for item in tqdm(
-                            pool.imap(self.single_process, smiles_list),
-                            total=len(smiles_list)
-                        )
-                    ]
-                except KeyboardInterrupt:
-                    logger.warning("KeyboardInterrupt received, terminating workers...")
-                    pool.terminate()
-                    pool.join()
-                    raise
+                results = [
+                    item for item in tqdm(pool.imap(self.single_process, smiles_list))
+                ]
         else:
             results = [self.single_process(smiles) for smiles in tqdm(smiles_list)]
 
@@ -273,8 +257,7 @@ def inner_smi2coords(smi, seed=42, mode='fast', remove_hs=True, return_mol=False
                 # some conformer can not use MMFF optimize
                 AllChem.MMFFOptimizeMolecule(mol)
                 coordinates = mol.GetConformer().GetPositions().astype(np.float32)
-            except Exception:
-                # MMFF optimization failed, use unoptimized coordinates
+            except:
                 coordinates = mol.GetConformer().GetPositions().astype(np.float32)
         ## for fast test... ignore this ###
         elif res == -1 and mode == 'heavy':
@@ -283,8 +266,7 @@ def inner_smi2coords(smi, seed=42, mode='fast', remove_hs=True, return_mol=False
                 # some conformer can not use MMFF optimize
                 AllChem.MMFFOptimizeMolecule(mol)
                 coordinates = mol.GetConformer().GetPositions().astype(np.float32)
-            except Exception:
-                # MMFF optimization failed, fall back to 2D coordinates
+            except:
                 AllChem.Compute2DCoords(mol)
                 coordinates_2d = mol.GetConformer().GetPositions().astype(np.float32)
                 coordinates = coordinates_2d
@@ -329,7 +311,11 @@ def inner_coords(atoms, coordinates, remove_hs=True):
 
     :raises AssertionError: If the length of `atoms` list does not match the length of `coordinates` list.
     """
-    assert len(atoms) == len(coordinates), "coordinates shape is not align atoms"
+    assert len(atoms) == len(coordinates), (
+        f"coordinates shape is not align atoms: "
+        f"len(atoms)={len(atoms)}, len(coordinates)={len(coordinates)}. "
+        f"atoms={atoms[:5]}{'...' if len(atoms) > 5 else ''}"
+    )
     coordinates = np.array(coordinates).astype(np.float32)
     if remove_hs:
         idx = [i for i, atom in enumerate(atoms) if atom != 'H']
@@ -337,7 +323,10 @@ def inner_coords(atoms, coordinates, remove_hs=True):
         coordinates_no_h = coordinates[idx]
         assert len(atoms_no_h) == len(
             coordinates_no_h
-        ), "coordinates shape is not align with atoms"
+        ), (
+            f"coordinates shape is not align with atoms after removing H: "
+            f"len(atoms_no_h)={len(atoms_no_h)}, len(coordinates_no_h)={len(coordinates_no_h)}"
+        )
         return atoms_no_h, coordinates_no_h
     else:
         return atoms, coordinates
@@ -474,28 +463,12 @@ class UniMolV2Feature(object):
         return inputs
 
     def transform(self, smiles_list):
-        """
-        Transform a list of SMILES strings into UniMolV2 features.
-        
-        Uses multiprocessing with proper cleanup (pool.join()) and timeout
-        handling to prevent race conditions (fixes issue #19).
-        """
         logger.info('Start generating conformers...')
         if self.multi_process:
             with Pool(processes=min(8, os.cpu_count())) as pool:
-                # Use timeout to prevent indefinite hanging
-                try:
-                    results = [
-                        item for item in tqdm(
-                            pool.imap(self.single_process, smiles_list),
-                            total=len(smiles_list)
-                        )
-                    ]
-                except KeyboardInterrupt:
-                    logger.warning("KeyboardInterrupt received, terminating workers...")
-                    pool.terminate()
-                    pool.join()
-                    raise
+                results = [
+                    item for item in tqdm(pool.imap(self.single_process, smiles_list))
+                ]
         else:
             results = [self.single_process(smiles) for smiles in tqdm(smiles_list)]
 
